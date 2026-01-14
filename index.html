@@ -177,25 +177,31 @@
     </div>
 
     <script>
-       
-        const LIFF_ID = "2008892438-qVn8tOFT"; // ใส่ MINI App ID 
+        // Configuration
+        const LIFF_ID = "2008892438-qVn8tOFT"; // ใส่ MINI App ID ของคุณ
+        const SUPABASE_FUNCTION_URL = "https://grubidfpvzsrxvukmcmi.supabase.co/functions/v1/send-line-miniapp";
         
-        // เช่น https://xxxxxxxx.supabase.co/functions/v1/send-line-miniapp
-        const SUPABASE_FUNCTION_URL = "https://grubidfpvzsrxvukmcmi.supabase.co/functions/v1/send-line-miniapp"; 
+        // ตั้งค่า SECRET_KEY ตรงนี้ (ต้องตรงกับใน Supabase Secrets)
+        const FUNCTION_SECRET_KEY = "your-secret-key-here"; // เปลี่ยนเป็นรหัสของคุณ
 
-       
+        // DOM Elements
         const btn = document.getElementById('sendBtn');
         const btnText = document.getElementById('btnText');
         const btnLoader = document.getElementById('btnLoader');
         const statusMsg = document.getElementById('statusMessage');
 
+        // Initialize LIFF
         async function main() {
             try {
-                await liff.init({ liffId: LIFF_ID , withLoginOnExternalBrowser: true });
+                await liff.init({ 
+                    liffId: LIFF_ID,
+                    withLoginOnExternalBrowser: true 
+                });
+                
                 if (!liff.isLoggedIn()) {
                     liff.login({ redirectUri: window.location.href });
                 } else {
-                   
+                    // Show user profile
                     const profile = await liff.getProfile();
                     document.getElementById('userImage').src = profile.pictureUrl;
                     document.getElementById('userName').innerText = profile.displayName;
@@ -206,10 +212,10 @@
             }
         }
 
-        
+        // Main function
         main();
 
-       
+        // Send notification function
         async function sendNotification() {
             if (!liff.isLoggedIn()) {
                 liff.login({ redirectUri: window.location.href });
@@ -217,40 +223,47 @@
             }
 
             setLoading(true);
-            showStatus("", true); 
+            showStatus("", true);
 
             try {
-               
                 const accessToken = liff.getAccessToken();
+                if (!accessToken) throw new Error("ไม่พบ Access Token");
 
-                if(!accessToken) throw new Error("ไม่พบ Access Token");
-
-               
+                // ส่ง request กับ Basic Authentication
                 const response = await fetch(SUPABASE_FUNCTION_URL, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Authorization': `Basic ${FUNCTION_SECRET_KEY}`
                     },
-                    body: JSON.stringify({ liffAccessToken: accessToken })
+                    body: JSON.stringify({ 
+                        liffAccessToken: accessToken 
+                    })
                 });
+
+                // ตรวจสอบ response status
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    throw new Error(`HTTP ${response.status}: ${errorData.error || 'Unknown error'}`);
+                }
 
                 const data = await response.json();
 
                 if (data.success) {
-                    showStatus("ส่งข้อความสำเร็จเรียบร้อย!", true);
+                    showStatus("✓ ส่งข้อความสำเร็จเรียบร้อย!", true);
                 } else {
                     throw new Error(data.error || "Unknown Error");
                 }
 
             } catch (error) {
-                console.error(error);
-                showStatus("เกิดข้อผิดพลาด: " + error.message, false);
+                console.error('Error details:', error);
+                showStatus("✗ เกิดข้อผิดพลาด: " + error.message, false);
             } finally {
                 setLoading(false);
             }
         }
 
-       
+        // Helper functions
         function setLoading(isLoading) {
             if (isLoading) {
                 btn.disabled = true;
@@ -267,6 +280,11 @@
             statusMsg.innerText = message;
             statusMsg.className = isSuccess ? 'success' : 'error';
             statusMsg.style.opacity = 1;
+            
+            // Clear message after 5 seconds
+            setTimeout(() => {
+                statusMsg.style.opacity = 0;
+            }, 5000);
         }
 
     </script>
