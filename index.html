@@ -48,6 +48,7 @@
             box-shadow: var(--shadow);
             padding: 40px 30px;
             text-align: center;
+            transition: transform 0.3s ease;
         }
 
         .icon-wrapper {
@@ -90,6 +91,7 @@
             color: white;
             font-size: 16px;
             font-weight: 600;
+            font-family: 'Kanit', sans-serif;
             cursor: pointer;
             transition: all 0.2s;
             box-shadow: 0 4px 15px rgba(6, 199, 85, 0.3);
@@ -107,6 +109,7 @@
             box-shadow: none;
         }
 
+       
         .spinner {
             display: none;
             width: 20px;
@@ -122,20 +125,18 @@
             to { transform: rotate(360deg); }
         }
 
+        
         #statusMessage {
             margin-top: 20px;
             font-size: 14px;
             font-weight: 500;
             opacity: 0;
             transition: opacity 0.5s;
-            min-height: 40px;
-            padding: 10px;
-            border-radius: 8px;
-            background: #f8f9fa;
         }
         .success { color: var(--primary-color); }
         .error { color: #FF4B4B; }
 
+       
         #userProfile {
             display: none;
             margin-bottom: 20px;
@@ -148,30 +149,6 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
-        .debug-info {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f5f5f5;
-            border-radius: 8px;
-            font-size: 12px;
-            text-align: left;
-            display: none;
-        }
-        .debug-info pre {
-            overflow-x: auto;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-        
-        .debug-toggle {
-            background: none;
-            border: none;
-            color: #666;
-            font-size: 12px;
-            cursor: pointer;
-            margin-top: 10px;
-            text-decoration: underline;
-        }
     </style>
 </head>
 <body>
@@ -185,7 +162,7 @@
 
         <div id="userProfile">
             <img id="userImage" src="" alt="User">
-            <p id="userName">ยินดีต้อนรับ</p>
+            <p id="userName" class="text-xs text-gray-500">ยินดีต้อนรับ</p>
         </div>
 
         <h1>แจ้งเตือนการจอง</h1>
@@ -197,197 +174,92 @@
         </button>
 
         <div id="statusMessage"></div>
-        
-        <button class="debug-toggle" onclick="toggleDebug()">แสดงข้อมูล Debug</button>
-        
-        <div class="debug-info" id="debugInfo">
-            <h4>Debug Information:</h4>
-            <div id="debugContent"></div>
-        </div>
     </div>
 
     <script>
-        // Configuration - ต้องแก้ไขค่านี้ให้ตรงกับที่ตั้งไว้ใน Supabase!
-        const LIFF_ID = "2008892438-qVn8tOFT"; // LIFF App ID ของคุณ
-        const SUPABASE_FUNCTION_URL = "https://grubidfpvzsrxvukmcmi.supabase.co/functions/v1/send-line-miniapp";
+       
+        const LIFF_ID = "2008892438-qVn8tOFT"; // ใส่ MINI App ID 
         
-        // ⚠️ เปลี่ยนค่านี้ให้ตรงกับ FUNCTION_SECRET_KEY ใน Supabase Secrets!
-        const FUNCTION_SECRET_KEY = "iton5-miniapp-secret-2024"; 
+        // เช่น https://xxxxxxxx.supabase.co/functions/v1/send-line-miniapp
+        const SUPABASE_FUNCTION_URL = "https://grubidfpvzsrxvukmcmi.supabase.co/functions/v1/send-line-miniapp"; 
 
-        // DOM Elements
+       
         const btn = document.getElementById('sendBtn');
         const btnText = document.getElementById('btnText');
         const btnLoader = document.getElementById('btnLoader');
         const statusMsg = document.getElementById('statusMessage');
-        const debugInfo = document.getElementById('debugInfo');
-        const debugContent = document.getElementById('debugContent');
 
-        // Debug log
-        function debugLog(message, data = null) {
-            const timestamp = new Date().toLocaleTimeString();
-            let logMessage = `[${timestamp}] ${message}`;
-            
-            if (data) {
-                logMessage += '<br>' + JSON.stringify(data, null, 2);
-            }
-            
-            debugContent.innerHTML = logMessage + '<br><br>' + debugContent.innerHTML;
-            console.log(`[DEBUG] ${message}`, data || '');
-        }
-
-        // Toggle debug info
-        function toggleDebug() {
-            debugInfo.style.display = debugInfo.style.display === 'block' ? 'none' : 'block';
-        }
-
-        // Initialize LIFF
         async function main() {
-            debugLog('เริ่มต้น LIFF...');
-            
             try {
-                await liff.init({ 
-                    liffId: LIFF_ID,
-                    withLoginOnExternalBrowser: true 
-                });
-                
-                debugLog('LIFF init สำเร็จ', {
-                    isLoggedIn: liff.isLoggedIn(),
-                    isInClient: liff.isInClient(),
-                    os: liff.getOS(),
-                    language: liff.getLanguage(),
-                    version: liff.getVersion()
-                });
-
+                await liff.init({ liffId: LIFF_ID , withLoginOnExternalBrowser: true });
                 if (!liff.isLoggedIn()) {
-                    debugLog('ผู้ใช้ยังไม่ได้ล็อกอิน, กำลังล็อกอิน...');
                     liff.login({ redirectUri: window.location.href });
                 } else {
-                    // Show user profile
-                    debugLog('กำลังโหลดโปรไฟล์ผู้ใช้...');
+                   
                     const profile = await liff.getProfile();
-                    
                     document.getElementById('userImage').src = profile.pictureUrl;
                     document.getElementById('userName').innerText = profile.displayName;
                     document.getElementById('userProfile').style.display = 'block';
-                    
-                    debugLog('โปรไฟล์ผู้ใช้โหลดสำเร็จ', {
-                        name: profile.displayName,
-                        userId: profile.userId,
-                        pictureUrl: profile.pictureUrl ? 'มี' : 'ไม่มี'
-                    });
                 }
             } catch (err) {
-                debugLog('❌ LIFF init ล้มเหลว', err);
                 showStatus("LIFF init failed: " + err.message, false);
             }
         }
 
-        // Start main function
+        
         main();
 
-        // Send notification function
+       
         async function sendNotification() {
-            debugLog('เริ่มส่งการแจ้งเตือน...');
-            
             if (!liff.isLoggedIn()) {
-                debugLog('ผู้ใช้ไม่ได้ล็อกอิน, กำลังล็อกอินใหม่...');
                 liff.login({ redirectUri: window.location.href });
                 return;
             }
 
             setLoading(true);
-            showStatus("กำลังส่งข้อความ...", true);
+            showStatus("", true); 
 
             try {
-                // Get LIFF Access Token
+               
                 const accessToken = liff.getAccessToken();
-                debugLog('ได้ LIFF Access Token', {
-                    hasToken: !!accessToken,
-                    tokenLength: accessToken ? accessToken.length : 0,
-                    tokenPrefix: accessToken ? accessToken.substring(0, 20) + '...' : 'ไม่มี'
-                });
 
-                if (!accessToken) {
-                    throw new Error("ไม่พบ Access Token");
-                }
+                if(!accessToken) throw new Error("ไม่พบ Access Token");
 
-                // Prepare request
-                debugLog('กำลังส่ง request ไปยัง Supabase Function...', {
-                    url: SUPABASE_FUNCTION_URL,
-                    secretKeyLength: FUNCTION_SECRET_KEY.length,
-                    secretKeyPrefix: FUNCTION_SECRET_KEY.substring(0, 3) + '...'
-                });
-
+               
                 const response = await fetch(SUPABASE_FUNCTION_URL, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Basic ${FUNCTION_SECRET_KEY}`
+                        'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ 
-                        liffAccessToken: accessToken 
-                    })
+                    body: JSON.stringify({ liffAccessToken: accessToken })
                 });
-
-                debugLog('ได้รับ response จาก Supabase', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    ok: response.ok
-                });
-
-                // Check response status
-                if (!response.ok) {
-                    let errorData;
-                    try {
-                        errorData = await response.json();
-                    } catch (e) {
-                        errorData = { error: await response.text() };
-                    }
-                    
-                    debugLog('❌ Response error', errorData);
-                    throw new Error(`HTTP ${response.status}: ${errorData.error || 'Unknown error'}`);
-                }
 
                 const data = await response.json();
-                debugLog('Response data', data);
 
                 if (data.success) {
-                    debugLog('✅ ส่งข้อความสำเร็จ');
-                    showStatus("✓ ส่งข้อความสำเร็จเรียบร้อย!", true);
+                    showStatus("ส่งข้อความสำเร็จเรียบร้อย!", true);
                 } else {
-                    debugLog('❌ Response สำเร็จแต่มี error', data);
                     throw new Error(data.error || "Unknown Error");
                 }
 
             } catch (error) {
-                debugLog('❌ Error ในการส่งการแจ้งเตือน', {
-                    message: error.message,
-                    stack: error.stack
-                });
-                
-                showStatus("✗ เกิดข้อผิดพลาด: " + error.message, false);
-                
-                // Show detailed error for debugging
-                if (error.message.includes('401')) {
-                    showStatus("✗ Authentication failed: Check SECRET_KEY", false);
-                }
+                console.error(error);
+                showStatus("เกิดข้อผิดพลาด: " + error.message, false);
             } finally {
                 setLoading(false);
             }
         }
 
-        // Helper functions
+       
         function setLoading(isLoading) {
             if (isLoading) {
                 btn.disabled = true;
                 btnText.style.display = 'none';
                 btnLoader.style.display = 'block';
-                debugLog('กำลังโหลด...');
             } else {
                 btn.disabled = false;
                 btnText.style.display = 'block';
                 btnLoader.style.display = 'none';
-                debugLog('โหลดเสร็จสิ้น');
             }
         }
 
@@ -395,18 +267,6 @@
             statusMsg.innerText = message;
             statusMsg.className = isSuccess ? 'success' : 'error';
             statusMsg.style.opacity = 1;
-            
-            // Clear message after 5 seconds
-            setTimeout(() => {
-                if (statusMsg.innerText === message) {
-                    statusMsg.style.opacity = 0;
-                }
-            }, 5000);
-        }
-
-        // Show debug by default in development
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            debugInfo.style.display = 'block';
         }
 
     </script>
